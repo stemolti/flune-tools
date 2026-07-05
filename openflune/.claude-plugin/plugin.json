@@ -1,0 +1,15 @@
+{
+  "name": "openflune",
+  "description": "Ticket refinement and automated implementation pipeline for GitHub",
+  "version": "1.0.0",
+  "author": {
+    "name": "Tete Stefano Agbodan"
+  },
+  "repository": "https://github.com/stemolti/flune-tools",
+  "keywords": [
+    "workflow",
+    "github",
+    "tdd",
+    "implementation"
+  ]
+}

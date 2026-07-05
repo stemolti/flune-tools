@@ -1,0 +1,35 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": ["docker", "podman"],
+    "network": {
+      "allowedDomains": [],
+      "allowLocalBinding": true
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Write",
+      "Edit",
+      "Read(~/.claude/plugins/**)",
+      "Read(//tmp/claude*/**)",
+      "Write(//tmp/claude*/**)",
+      "Bash(cd:*)",
+      "Bash(dotnet:*)",
+      "Bash(npm:*)",
+      "Bash(ng:*)",
+      "Bash(go:*)",
+      "Bash(git:*)",
+      "Bash(gh:*)"
+    ],
+    "deny": [
+      "Bash(git push --force:*)",
+      "Bash(git reset --hard:*)",
+      "Read(~/.ssh/)",
+      "Read(~/.aws/)",
+      "Read(.env)"
+    ]
+  }
+}

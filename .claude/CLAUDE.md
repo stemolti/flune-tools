@@ -1,0 +1,25 @@
+# flune-tools
+
+Monorepo for Claude Code plugins and development tooling.
+GitHub Issues for tracking. GitHub for code and PRs.
+
+## Projects
+
+- `openflune/` — Claude Code plugin: markdown skills, agents, shell hooks
+
+Each project has its own `.claude/CLAUDE.md` with project-specific context.
+
+## Critical Rules
+- ALWAYS read the relevant project's `.claude/rules/` files before working on any layer.
+- Test-first: integration tests that assert behavior, not implementation details.
+- Keep tickets well-scoped. 1 ticket = 1 PR.
+- Use git worktrees for all feature work. Never modify code in main worktree.
+
+## Build & Test
+
+### openflune
+- No build step (markdown/shell plugin)
+
+## Versioning
+
+- openflune: auto-bumped on push to main (paths: `openflune/**`), tags: `openflune/v*`
