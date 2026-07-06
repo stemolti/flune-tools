@@ -27,4 +27,4 @@ Each project has its own `.claude/CLAUDE.md` with project-specific context.
 ## Versioning
 
 - openflune: auto-bumped on push to main (paths: `openflune/**`), tags: `openflune/v*`
-- flune: manual for now (npm publish workflow is a follow-up ticket)
+- flune: auto-bumped + npm-published on push to main (paths: `flune/**`), tags: `flune/v*` (requires `NPM_TOKEN` secret)
