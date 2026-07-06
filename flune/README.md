@@ -11,6 +11,12 @@ LLM client ──► flune serve (localhost:4000/v1) ──► OpenRouter
              remote MCP servers over Streamable HTTP + OAuth
 ```
 
+> **Which do I need?** This is for generic OpenAI-compatible / OpenRouter clients. If you're
+> using **Claude Code** (e.g. via the openflune plugin), you don't need `flune` at all — connect
+> Mobbin (or other MCP servers) directly with `claude mcp add`. See
+> [`openflune/README.md`](../openflune/README.md) and
+> [`openflune/docs/mobbin.md`](../openflune/docs/mobbin.md).
+
 ## Install
 
 ```bash

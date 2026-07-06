@@ -2,6 +2,12 @@
 
 Ticket refinement and automated implementation pipeline for GitHub.
 
+> **Which do I need?** This is for **Claude Code** users. If you want Mobbin (or any MCP tool)
+> from a generic OpenAI-compatible / OpenRouter LLM client instead, see
+> [`flune/`](../flune/README.md) in this repo. You do **not** need `flune remote add` /
+> `flune login` / `flune serve` here — Mobbin connects directly via `claude mcp add mobbin …`
+> (see [`docs/mobbin.md`](docs/mobbin.md)).
+
 ## What it does
 
 | Skill | Description |
