@@ -1,6 +1,10 @@
+import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
+import { FluneOAuthProvider } from "../core/oauth.js";
 import type { PluginEntry, PluginStatus } from "../types.js";
 
 export interface McpToolInfo {
@@ -34,12 +38,30 @@ export class McpSessionManager {
     const plugin = this.plugins.get(pluginName);
     if (!plugin) throw new Error(`Unknown plugin "${pluginName}"`);
 
-    const transport = new StdioClientTransport({
-      command: plugin.command,
-      args: plugin.args,
-    });
+    const transport: Transport =
+      plugin.transport === "http"
+        ? new StreamableHTTPClientTransport(new URL(plugin.url), {
+            authProvider: new FluneOAuthProvider(plugin.name),
+          })
+        : new StdioClientTransport({
+            command: plugin.command,
+            args: plugin.args,
+          });
+
     const client = new Client({ name: "flune-proxy", version: "0.1.0" });
-    await client.connect(transport);
+    try {
+      await client.connect(transport);
+    } catch (err) {
+      // A remote server with no valid session surfaces as an auth failure;
+      // translate it into an actionable hint instead of a raw SDK error.
+      if (err instanceof UnauthorizedError) {
+        throw new Error(
+          err.message ||
+            `"${plugin.name}" needs authentication — run: flune login ${plugin.name}`,
+        );
+      }
+      throw err;
+    }
     this.clients.set(pluginName, client);
     return client;
   }

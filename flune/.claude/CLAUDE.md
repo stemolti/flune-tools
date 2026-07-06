@@ -1,12 +1,12 @@
 # Project: flune
 
 TypeScript CLI (`flune`) — plugin manager + local MCP proxy middleware.
-Exposes an OpenAI-compatible endpoint (Fastify) in front of OpenRouter and executes installed MCP plugins over stdio.
+Exposes an OpenAI-compatible endpoint (Fastify) in front of OpenRouter and executes installed MCP plugins — local ones over stdio, remote ones over Streamable HTTP with OAuth (`flune remote add` / `flune login`).
 
 ## Layout (strict domain separation)
 
 - `src/cli/` — commander wiring only, no business logic
-- `src/core/` — plugin install + `~/.flune/config.json` registry (paths, config, package-manager, installer)
+- `src/core/` — plugin install + `~/.flune/config.json` registry (paths, config, package-manager, installer) + remote-server OAuth (`oauth.ts`, tokens in `~/.flune/auth/`)
 - `src/proxy/` — Fastify server, OpenRouter client, tool bridge, MCP session manager, agentic orchestrator
 - `tests/` — vitest integration tests; fully offline (fixture stdio MCP server + scripted fake OpenRouter)
 

@@ -4,17 +4,33 @@ export type PackageManagerName = "npm" | "pnpm" | "yarn" | "bun";
 
 export type PluginStatus = "installed" | "error" | "disabled";
 
-export interface PluginEntry {
+export type PluginTransport = "stdio" | "http";
+
+interface BasePluginEntry {
   name: string;
   version: string;
   status: PluginStatus;
+  installedAt: string;
+}
+
+/** A local plugin executed as a child process and spoken to over stdio (the default). */
+export interface StdioPluginEntry extends BasePluginEntry {
+  // Absent transport means "stdio" — keeps pre-existing config entries valid.
+  transport?: "stdio";
   installPath: string;
   entryPoint: string;
   command: string;
   args: string[];
   packageManager: PackageManagerName;
-  installedAt: string;
 }
+
+/** A remote MCP server reached over Streamable HTTP, authenticated with OAuth. */
+export interface HttpPluginEntry extends BasePluginEntry {
+  transport: "http";
+  url: string;
+}
+
+export type PluginEntry = StdioPluginEntry | HttpPluginEntry;
 
 export interface FluneConfig {
   version: 1;
