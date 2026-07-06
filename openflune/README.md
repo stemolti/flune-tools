@@ -8,7 +8,7 @@ Ticket refinement and automated implementation pipeline for GitHub.
 |-------|-------------|
 | `/openflune:configure` | Interactive project setup: tech stack, sandboxing, MCP/LSP servers |
 | `/openflune:refine <ticket-id>` | Iterative ticket refinement until it's ready for planning |
-| `/openflune:design <ticket-id \| description>` | Interactive design reasoning and `.pen` file creation using Pencil |
+| `/openflune:design [--mobbin] <ticket-id \| description>` | Interactive design reasoning and `.pen` file creation using Pencil. Add `--mobbin` to pull real-world UI references from Mobbin first (paid Mobbin plan; opt-in) |
 | `/openflune:implement <ticket-id>` | Full pipeline: plan, test, implement, refactor, security review, code review, lessons, PR |
 | `/openflune:address-review <pr-number>` | Address PR review comments — fetch, evaluate, fix, reply, push, re-request review |
 | `/openflune:sync` | Pull latest main, rebase active worktrees, prune stale remotes, clean up merged branches |
@@ -80,6 +80,8 @@ claude
 
 # 4. Design a ticket (optional — for frontend/UI tickets)
 /openflune:design 12345
+#    ...or ground it in real-world UI references first (paid Mobbin plan, opt-in):
+/openflune:design --mobbin 12345
 
 # 5. Implement a ticket
 /openflune:implement 12345
@@ -253,7 +255,7 @@ The plugin uses specialized agents with isolated contexts:
 
 **Model tiering**: Opus where judgment is concentrated — `/openflune:refine` and `/openflune:design` pin `model: opus` because scope, acceptance criteria, splits, and UX structure drive everything downstream. Sonnet for pipeline orchestration and implementation (`/openflune:implement` pins `model: sonnet`). Haiku for mechanical collection (lessons-collector). These pins are visible in each skill's frontmatter and override the session model for that skill only.
 
-External integrations use the `gh` CLI rather than MCP servers, keeping permissions simple and avoiding token overhead. Optional MCP servers: Context7 (live documentation lookup) and Pencil (design file creation via `/openflune:design`).
+External integrations use the `gh` CLI rather than MCP servers, keeping permissions simple and avoiding token overhead. Optional MCP servers: Context7 (live documentation lookup), Pencil (design file creation via `/openflune:design`), and Mobbin (real-world UI references via `/openflune:design --mobbin` — a paid, OAuth-gated remote server that is fully opt-in and never bundled). See [`docs/mobbin.md`](docs/mobbin.md).
 
 ## Known Limitations
 
