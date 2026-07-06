@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
     paths: ['flune/**']
+  # Manual trigger to (re)publish the current flune/ version — used to recover
+  # when a version was bumped + tagged but the publish step failed.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -40,14 +43,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Bump version, tag, and publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Bump + tag only on push. A manual dispatch republishes the current
+      # version as-is (it was already bumped + tagged by the failed run).
+      - name: Bump version and tag
+        if: github.event_name == 'push'
         run: |
           # Skip if last commit is already a release commit
           LAST_MSG=$(git log -1 --pretty=format:"%s")
           if echo "$LAST_MSG" | grep -q '^chore(release): flune/v'; then
-            echo "Last commit is a release commit, skipping"
+            echo "Last commit is a release commit, skipping bump"
             exit 0
           fi
 
@@ -72,5 +76,16 @@ jobs:
           git tag "flune/v${NEW_VERSION}"
           git push origin "flune/v${NEW_VERSION}"
 
-          # Publish to npm with provenance attestation
-          npm publish --provenance --access public
+      # Idempotent publish: only publishes if the current version is not already
+      # on npm, so re-runs and manual dispatches are safe.
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "flune@${VERSION}" version >/dev/null 2>&1; then
+            echo "flune@${VERSION} is already published, skipping"
+          else
+            echo "Publishing flune@${VERSION}"
+            npm publish --provenance --access public
+          fi
