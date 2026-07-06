@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import type { PluginEntry } from "../types.js";
+import type { StdioPluginEntry } from "../types.js";
 import { upsertPlugin } from "./config.js";
 import {
   installCommand,
@@ -24,7 +24,7 @@ export interface InstallOptions {
 export async function installPlugin(
   pkgSpec: string,
   options: InstallOptions = {},
-): Promise<PluginEntry> {
+): Promise<StdioPluginEntry> {
   const pm = resolvePackageManager(options.packageManager);
   const registryName = parseRegistryName(pkgSpec);
 
@@ -62,7 +62,7 @@ export async function installPlugin(
     ) as Record<string, unknown>;
     const entryPoint = resolveEntryPoint(packageDir, manifest);
 
-    const entry: PluginEntry = {
+    const entry: StdioPluginEntry = {
       name,
       version: typeof manifest.version === "string" ? manifest.version : "0.0.0",
       status: "installed",

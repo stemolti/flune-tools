@@ -5,6 +5,7 @@ import { Command } from "commander";
 
 import { registerInstallCommand } from "./commands/install.js";
 import { registerListCommand } from "./commands/list.js";
+import { registerRemoteCommand } from "./commands/remote.js";
 import { registerServeCommand } from "./commands/serve.js";
 
 const pkg = JSON.parse(
@@ -22,6 +23,7 @@ program
 
 registerInstallCommand(program);
 registerListCommand(program);
+registerRemoteCommand(program);
 registerServeCommand(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {

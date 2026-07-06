@@ -14,8 +14,12 @@ export function registerListCommand(program: Command): void {
         return;
       }
       for (const plugin of plugins) {
+        const source =
+          plugin.transport === "http"
+            ? `http ${plugin.url}`
+            : plugin.entryPoint;
         console.log(
-          `${plugin.name}@${plugin.version}  [${plugin.status}]  ${plugin.entryPoint}`,
+          `${plugin.name}@${plugin.version}  [${plugin.status}]  ${source}`,
         );
       }
     });

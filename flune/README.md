@@ -7,7 +7,8 @@ LLM client ──► flune serve (localhost:4000/v1) ──► OpenRouter
                     │  injects MCP tools as OpenAI `tools`
                     │  intercepts tool_calls
                     ▼
-             ~/.flune/plugins/* (stdio MCP servers)
+             ~/.flune/plugins/* (local stdio MCP servers)
+             remote MCP servers over Streamable HTTP + OAuth
 ```
 
 ## Install
@@ -29,6 +30,19 @@ flune list
 ```
 
 Plugins are npm packages that expose a stdio MCP server via their `bin` (or `main`) entry. Each plugin is installed with its dependencies isolated under `~/.flune/plugins/<name>` and registered in `~/.flune/config.json`. Use `--pm pnpm|yarn|bun` to install with a different package manager.
+
+### Connect a remote MCP server (OAuth)
+
+Besides local stdio plugins, flune can proxy **remote MCP servers** that speak the Streamable HTTP transport and authenticate with OAuth. Register one, then authenticate once in the browser:
+
+```bash
+flune remote add mobbin https://api.mobbin.com/mcp
+flune login mobbin      # opens a browser to sign in; tokens are stored in ~/.flune/auth/
+```
+
+`flune login` runs the standard MCP OAuth flow (dynamic client registration + PKCE) against the server and saves the tokens under `~/.flune/auth/<name>.json`; they refresh automatically. Once authenticated, the server's tools are injected like any other plugin's. If a remote server's session expires, `flune serve` skips it and logs a hint to re-run `flune login <name>`. Remote URLs must be `https` (only loopback hosts may use `http`).
+
+> [Mobbin](https://mobbin.com) is a paid example — its MCP server needs a Pro/Team/Enterprise plan. flune stays vendor-neutral: `remote add` works with any OAuth-secured Streamable HTTP MCP server.
 
 ### Start the proxy
 
@@ -56,7 +70,7 @@ curl -N http://127.0.0.1:4000/v1/chat/completions \
 
 ## How it works
 
-On each chat request the proxy loads the registered plugins (persistent stdio sessions, spawned lazily), maps their MCP tool schemas to OpenAI `tools` namespaced as `<plugin>__<tool>`, and forwards the enriched request to OpenRouter. When the model answers with a `tool_call` for a plugin tool, flune executes it over MCP `tools/call`, feeds the result back, and repeats (max 10 rounds) until a final text answer streams back to the client. Tool calls that belong to the client's *own* tools are passed through untouched.
+On each chat request the proxy loads the registered plugins (persistent sessions, spawned lazily — a local stdio child process, or a remote Streamable HTTP connection with OAuth), maps their MCP tool schemas to OpenAI `tools` namespaced as `<plugin>__<tool>`, and forwards the enriched request to OpenRouter. When the model answers with a `tool_call` for a plugin tool, flune executes it over MCP `tools/call`, feeds the result back, and repeats (max 10 rounds) until a final text answer streams back to the client. Tool calls that belong to the client's *own* tools are passed through untouched.
 
 `FLUNE_HOME` overrides the default `~/.flune` location.
 
