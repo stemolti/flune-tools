@@ -1,5 +1,5 @@
 {
-  "name": "flune",
+  "name": "@stemolti/flune",
   "version": "0.2.0",
   "description": "Plugin manager and local MCP proxy — an OpenAI-compatible endpoint that gives any LLM client MCP tool-calling via OpenRouter",
   "license": "MIT",
@@ -12,6 +12,9 @@
     "directory": "flune"
   },
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "flune": "dist/cli/index.js"
   },

@@ -9,7 +9,7 @@ Claude Code plugins and tooling.
 CLI plugin manager and local MCP proxy. Exposes an OpenAI-compatible endpoint in front of OpenRouter and injects installed MCP plugins as native tools — MCP tool-calling for any generic LLM client (Zed, Cursor, Chatbox, scripts).
 
 ```bash
-npm install -g flune
+npm install -g @stemolti/flune
 flune install <mcp-plugin-package>
 flune serve
 ```

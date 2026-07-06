@@ -13,8 +13,10 @@ LLM client ──► flune serve (localhost:4000/v1) ──► OpenRouter
 ## Install
 
 ```bash
-npm install -g flune
+npm install -g @stemolti/flune
 ```
+
+The package publishes as `@stemolti/flune`; the installed command is `flune`.
 
 ## Usage
 
