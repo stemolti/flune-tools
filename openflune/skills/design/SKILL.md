@@ -5,7 +5,7 @@ argument-hint: <ticket-id | design description> [additional context]
 user-invocable: true
 disable-model-invocation: true
 model: opus
-allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, WebFetch, mcp__pencil__get_editor_state, mcp__pencil__get_guidelines, mcp__pencil__batch_get, mcp__pencil__batch_design, mcp__pencil__get_screenshot, mcp__pencil__export_nodes, mcp__pencil__find_empty_space_on_canvas, mcp__pencil__snapshot_layout, mcp__pencil__open_document, mcp__pencil__get_variables, mcp__pencil__set_variables, mcp__pencil__replace_all_matching_properties, mcp__pencil__search_all_unique_properties
+allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, WebFetch, mcp__pencil__get_editor_state, mcp__pencil__get_guidelines, mcp__pencil__batch_get, mcp__pencil__batch_design, mcp__pencil__get_screenshot, mcp__pencil__export_nodes, mcp__pencil__find_empty_space_on_canvas, mcp__pencil__snapshot_layout, mcp__pencil__open_document, mcp__pencil__get_variables, mcp__pencil__set_variables, mcp__pencil__replace_all_matching_properties, mcp__pencil__search_all_unique_properties, mcp__mobbin
 ---
 
 <!-- Architecture note: openflune orchestrates Pencil via `pencil interactive` CLI (openflune-driven model).
@@ -16,6 +16,15 @@ allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, WebFetch, mcp__pe
      The Pencil editor is the design engine; Claude Code drives it via CLI subprocess (or MCP as legacy fallback).
      CLI mode (`pencil interactive -a desktop`) avoids loading MCP tool schemas into every conversation,
      saving ~3,000-5,000 tokens per conversation and enabling command batching via heredocs. -->
+
+<!-- Mobbin note: the optional `--mobbin` flag turns on Phase 2.7 (Mobbin Reference Gathering),
+     which pulls real-world, shipped UI references from Mobbin's MCP server before designing.
+     Mobbin is a PAID (Pro/Team/Enterprise), OAuth-authenticated remote MCP server, so it is
+     NEVER bundled or always-on — we do not ship it in an `.mcp.json`. Users opt in explicitly:
+     per-invocation via `--mobbin`, and per-project via `mobbin.enabled` in `.claude/config.json`
+     (set by `/openflune:configure`). The server is granted at server level (`mcp__mobbin` in
+     allowed-tools) because Mobbin does not publish stable tool names — tools are discovered at
+     runtime. See `docs/mobbin.md` for setup, auth, rate limits, and prompting best practices. -->
 
 ## Phase 0 — Context Loading
 
@@ -95,9 +104,18 @@ Before parsing arguments, verify that Pencil is reachable.
       2. Install the `pencil` command from within the Pencil app (File → Install `pencil` command into PATH) for auto-launch support."
       **Stop.**
 
+**Parse `$ARGUMENTS` — Flag Detection:**
+
+Before mode detection, check for the optional `--mobbin` flag:
+
+- If the **first whitespace-delimited token** of `$ARGUMENTS` is `--mobbin`, set `$MOBBIN_MODE = true`, **strip that token**, and continue parsing the remaining string as usual. Otherwise set `$MOBBIN_MODE = false`.
+- Examples: `--mobbin 42` → `$MOBBIN_MODE = true`, remaining `42`; `--mobbin add dark-mode toggle` → `$MOBBIN_MODE = true`, remaining `add dark-mode toggle`; `42` → `$MOBBIN_MODE = false`, remaining `42`.
+
+When `$MOBBIN_MODE` is `true`, Phase 2.7 (Mobbin Reference Gathering) runs after Phase 2. When it is `false`, Phase 2.7 is skipped entirely and the design proceeds with no Mobbin calls.
+
 **Parse `$ARGUMENTS` — Mode Detection:**
 
-Extract the first whitespace-delimited token from `$ARGUMENTS` and determine the mode:
+Using the string **after** the `--mobbin` flag has been stripped, extract the first whitespace-delimited token and determine the mode:
 
 - **If the first token matches `^\d+$` or `^#\d+$`** → **ticket mode**
   - Strip any `#` prefix to get the numeric ticket ID.
@@ -105,7 +123,7 @@ Extract the first whitespace-delimited token from `$ARGUMENTS` and determine the
   - Examples: `#1 focus on layout` → ID `1`, context `focus on layout`; `7` → ID `7`, no context.
 
 - **Otherwise** → **ticketless mode**
-  - The entire `$ARGUMENTS` string is the **design description**.
+  - The remaining string (after any `--mobbin` flag was stripped) is the **design description**.
   - There is no ticket ID — the design description is the primary input.
 
 **If ticket mode:** Fetch the ticket:
@@ -213,6 +231,56 @@ Options (multiSelect=true): "Empty state", "Populated / default", "Error state",
 
 Options: "Desktop only", "Desktop + Mobile", "Desktop + Tablet + Mobile"
 
+## Phase 2.7 — Mobbin Reference Gathering
+
+**Run this phase only if `$MOBBIN_MODE` is `true`.** If `$MOBBIN_MODE` is `false`, skip the entire phase and go straight to Phase 2.5 — make no Mobbin calls.
+
+Mobbin's MCP server surfaces real-world, shipped UI screens and flows so the design can be grounded in patterns that ship in production apps. It is a **paid** (Mobbin Pro/Team/Enterprise), OAuth-authenticated remote server. Read `${CLAUDE_PLUGIN_ROOT}/docs/mobbin.md` before proceeding — it covers setup, auth, rate limits, and prompting best practices.
+
+### Step 2.7A — Paid-feature Gate
+
+Read `mobbin.enabled` from `.claude/config.json` (already loaded in Phase 0).
+
+- **If `mobbin.enabled` is `true`** → proceed to Step 2.7B.
+- **If `mobbin` is absent or `mobbin.enabled` is not `true`** → Mobbin is not enabled for this project. Tell the user:
+  > "`--mobbin` requires a paid Mobbin plan (Pro/Team/Enterprise) and one-time setup. Enable it with `/openflune:configure` (turn on Mobbin design references), then authenticate with:
+  > `claude mcp add mobbin --scope user --transport http https://api.mobbin.com/mcp`
+  > followed by `/mcp` → **Authenticate**."
+  Then ask via `AskUserQuestion`:
+  > "How do you want to proceed?"
+  Options:
+  - **"Continue without Mobbin"** → set `$MOBBIN_MODE = false` and skip to Phase 2.5.
+  - **"Stop so I can set up Mobbin"** → **Stop.** The user re-runs after configuring.
+
+### Step 2.7B — Connectivity & Auth Check
+
+Probe the Mobbin server with one lightweight `mcp__mobbin` call (list/probe the available tools; use whichever search/discovery tool the server advertises with a minimal query). This both verifies the connection and discovers the exact tool names at runtime (Mobbin does not publish stable tool names — never hardcode them).
+
+- **If the probe succeeds** → note the discovered tool name(s) and proceed to Step 2.7C.
+- **If the probe fails** (server not connected, or `mcp__mobbin` tools unavailable / unauthorized) → the Mobbin MCP server is not connected or not authenticated. Tell the user:
+  > "The Mobbin MCP server isn't connected or authenticated. Run:
+  > `claude mcp add mobbin --scope user --transport http https://api.mobbin.com/mcp`
+  > then `/mcp` → **Authenticate** (a browser window opens to sign in to Mobbin). Once it shows `mobbin: connected`, re-run `/openflune:design --mobbin <ticket>`."
+  Then **Stop.** Do not continue the design — the user must authenticate and re-run.
+
+### Step 2.7C — Query Mobbin
+
+Build a **context-rich, specific** natural-language query from the Phase 2 outputs — combine: the design type (screen/component/dashboard/landing-page/form/slides), the feature area (from the ticket/description), the chosen visual direction, and the target platform (web/iOS/Android, desktop/mobile). Prefer concrete product language over generic terms (e.g., "mobile onboarding flow with progressive step indicators for a fintech KYC screen" beats "onboarding screen").
+
+Respect Mobbin's rate limit (**60 requests / 60 seconds per user**):
+- Issue at most a **couple of batched queries** — do not loop tool calls tightly.
+- If a call returns HTTP `429`, read the `Retry-After` value and wait that many seconds before a single retry; if it fails again, tell the user Mobbin is rate-limited and offer (via `AskUserQuestion`) to continue without Mobbin.
+
+### Step 2.7D — Present References
+
+Summarize the returned references — for each, the app/screen name, the pattern it illustrates, and its Mobbin link. Then present via `AskUserQuestion` (multiSelect=true):
+
+> "Mobbin returned these real-world references for [design task]. Which patterns should I use as inspiration? (Links included so you can review them yourself.)"
+
+Options: one per returned reference (app/screen + one-line pattern note), plus **"None — design without these"**.
+
+Store the user's selected references (name, pattern, link) as `$MOBBIN_REFERENCES` for use in Phase 3 and Phase 5.5. If the user picks "None", set `$MOBBIN_REFERENCES` to empty.
+
 ## Phase 2.5 — Prepare Design Directory
 
 After all design questions are answered, ensure the design directory exists. Design work runs directly on the current branch (expected: `main`) — **no feature branch is created**. Pencil keeps the `.pen` file open across invocations, and branch switching forces the user to re-open it manually in Pencil.
@@ -265,6 +333,7 @@ Use `batch_design` to create the design. Follow these rules:
 - Use reusable components from the design system where available (insert as `type: "ref"`)
 - For new elements not in the design system, create frames and text nodes directly
 - Apply styling from the style guide and Design Direction
+- **If `$MOBBIN_MODE` is `true` and `$MOBBIN_REFERENCES` is non-empty**, ground the layout and component structure in the selected Mobbin references — adopt the real-world patterns they demonstrate (navigation structure, content grouping, state handling) rather than inventing from scratch. The style guide and Design Direction still govern the visual aesthetic; the references inform structure and interaction patterns.
 - Use `find_empty_space_on_canvas` when positioning new screens to avoid overlapping existing content
 - Generate images with the `G()` operation where needed (hero images, avatars, illustrations)
 - Set theme variables via `set_variables` if creating a new design system or extending an existing one
@@ -375,6 +444,7 @@ Use the template at `${CLAUDE_PLUGIN_ROOT}/templates/design-spec.md` as the base
 - Replace `<pen-file-name>` with the actual `.pen` file name
 - Replace `<framework>` and select the matching Components table variant
 - Populate Screens, Components, Annotations, and Design Tokens tables with extracted data
+- **If `$MOBBIN_MODE` is `true` and `$MOBBIN_REFERENCES` is non-empty**, append a `## Design References (Mobbin)` section listing each selected reference as a bullet: `- [<app / screen name>](<mobbin link>) — <pattern it informed>`. This carries the design provenance into the implement pipeline, so the planner and implementer subagents (which read `DESIGN.md`) can see which real-world patterns the design followed.
 - Write the completed file to `<designPath>/DESIGN.md`
 
 **If `DESIGN.md` already exists** at that path, ask the user via `AskUserQuestion`:

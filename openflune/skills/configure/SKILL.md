@@ -53,6 +53,7 @@ If user context was provided, use it to steer the configuration (e.g., skip cert
 | 4. Sandboxing | `sandboxEnabled` | Pre-select Yes/No |
 | 5. MCP Servers | `mcpServers` | Pre-select servers where value is `true` |
 | 5b. Pencil design | `pencil` | Pre-select based on `pencil.enabled`; if field absent, ask normally |
+| 5c. Mobbin design references | `mobbin` | Pre-select based on `mobbin.enabled`; if field absent, ask normally |
 | 6. LSP Servers | `lspServers` | Pre-select servers where value is `true`; if field absent, ask normally |
 | 7. Auto-compact | `autoCompactDisabled` | Pre-select Yes/No |
 | 7b. Pin subagents to 200K | `pinSubagents200K` | Pre-select Yes/No |
@@ -132,10 +133,12 @@ Before asking about MCP servers, scan the project for framework dependencies:
 | *(Pencil editor open)* | pencil | (connected via editor) | — | — | editor |
 | `@angular/core` | angular | `npx` | `["-y", "@angular/cli", "mcp"]` | — | project |
 | `primeng` | primeng | `npx` | `["-y", "@primeng/mcp"]` | — | project |
+| *(frontend + paid Mobbin plan)* | mobbin | (remote, `--transport http`) | url `https://api.mobbin.com/mcp` | — (OAuth) | user |
 
 **Scope:**
 - **plugin**: Already defined in openflune's `.mcp.json`. Enable by setting `disabled: false`.
 - **project**: Add to the project's root `.mcp.json`.
+- **user**: A remote MCP server registered at user scope via `claude mcp add`. Persists across projects; the user authenticates once (browser OAuth). Not written to any repo `.mcp.json` — see question 5c.
 
 ### LSP Server Catalog
 
@@ -200,6 +203,25 @@ If no frontend framework is detected, skip this section entirely (do not set `pe
    - **Fails or not found** → Write `pencil.mode: "editor"` to the config. Inform the user:
      "Pencil `interactive` mode not available. Design skills will use the Pencil MCP server (requires the MCP connection to be active in your editor).
      For better token efficiency, install the `pencil` command from within the Pencil app (File → Install `pencil` command into PATH) and re-run `/openflune:configure` — this switches to `cli-app` mode which avoids loading MCP tool schemas into every conversation."
+
+### Mobbin Design References
+
+**Condition**: Only ask question 5c when a frontend framework is detected in the stack from question 1 (same frontend frameworks as the Pencil gate: Angular, React, Next.js, Vue, Svelte, or any UI framework).
+
+If no frontend framework is detected, skip this section entirely (do not set `mobbin` in config).
+
+5c. **Mobbin design references**: Present using AskUserQuestion:
+
+   "Do you want to enable Mobbin design references? When enabled, `/openflune:design --mobbin <ticket>` pulls real-world, shipped UI patterns from Mobbin's 600k+ screen library to ground the design.
+    Requires a **paid** Mobbin plan (Pro/Team/Enterprise) and one-time browser authentication. It is fully opt-in — nothing connects to Mobbin unless you pass `--mobbin`."
+
+   Options: "Yes — enable Mobbin design references", "No — skip"
+
+   - **If Yes** → write `mobbin: { enabled: true }` to `.claude/config.json`. Then tell the user how to connect the server (once per machine, user scope):
+     "Enabled. Authenticate the Mobbin MCP server once with:
+     `claude mcp add mobbin --scope user --transport http https://api.mobbin.com/mcp`
+     then run `/mcp` → **Authenticate** (a browser window opens to sign in to Mobbin). After it shows `mobbin: connected`, use `/openflune:design --mobbin <ticket>`."
+   - **If No** → omit `mobbin` from config (or, on re-configure, set `mobbin.enabled: false`).
 
 ### Playwright CLI Setup
 
