@@ -6,6 +6,7 @@ GitHub Issues for tracking. GitHub for code and PRs.
 ## Projects
 
 - `openflune/` — Claude Code plugin: markdown skills, agents, shell hooks
+- `flune/` — TypeScript CLI: plugin manager + OpenAI-compatible MCP proxy (Fastify, OpenRouter)
 
 Each project has its own `.claude/CLAUDE.md` with project-specific context.
 
@@ -20,6 +21,10 @@ Each project has its own `.claude/CLAUDE.md` with project-specific context.
 ### openflune
 - No build step (markdown/shell plugin)
 
+### flune
+- `cd flune && npm run build` (tsc) and `npm test` (vitest integration suite, offline)
+
 ## Versioning
 
 - openflune: auto-bumped on push to main (paths: `openflune/**`), tags: `openflune/v*`
+- flune: manual for now (npm publish workflow is a follow-up ticket)

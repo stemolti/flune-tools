@@ -1,0 +1,13 @@
+{
+  "name": "fake-mcp-server",
+  "version": "1.0.0",
+  "description": "Zero-dependency stdio MCP server used as a flune test fixture",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "fake-mcp-server": "server.js"
+  },
+  "files": [
+    "server.js"
+  ]
+}
